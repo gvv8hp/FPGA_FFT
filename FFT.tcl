@@ -123,6 +123,7 @@ set bCheckIPsPassed 1
 set bCheckIPs 1
 if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
+xilinx.com:ip:axi_intc:4.1\
 xilinx.com:ip:processing_system7:5.5\
 xilinx.com:ip:xfft:9.1\
 xilinx.com:ip:axi_dma:7.1\
@@ -194,6 +195,8 @@ proc create_hier_cell_ctrl { parentCell nameHier } {
   current_bd_instance $hier_obj
 
   # Create interface pins
+  create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M02_AXI
+
   create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:axis_rtl:1.0 M_AXIS_ACCEL
 
   create_bd_intf_pin -mode Master -vlnv xilinx.com:interface:aximm_rtl:1.0 M_AXI_DMA_DATA
@@ -209,6 +212,7 @@ proc create_hier_cell_ctrl { parentCell nameHier } {
   create_bd_pin -dir I -type rst ext_reset_in
   create_bd_pin -dir O -from 23 -to 0 fft_config_tdata
   create_bd_pin -dir O fft_config_tvalid
+  create_bd_pin -dir O -from 0 -to 0 -type rst peripheral_aresetn
 
   # Create instance: axi_dma_0, and set properties
   set axi_dma_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_dma:7.1 axi_dma_0 ]
@@ -242,6 +246,7 @@ proc create_hier_cell_ctrl { parentCell nameHier } {
   # Create instance: axi_interconnect_1, and set properties
   set axi_interconnect_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_interconnect:2.1 axi_interconnect_1 ]
   set_property -dict [ list \
+   CONFIG.NUM_MI {3} \
    CONFIG.SYNCHRONIZATION_STAGES {2} \
  ] $axi_interconnect_1
 
@@ -258,6 +263,7 @@ proc create_hier_cell_ctrl { parentCell nameHier } {
   set xlconcat_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 xlconcat_0 ]
 
   # Create interface connections
+  connect_bd_intf_net -intf_net Conn1 [get_bd_intf_pins M02_AXI] [get_bd_intf_pins axi_interconnect_1/M02_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_m_axi_mm2s [get_bd_intf_pins axi_dma_0/M_AXI_MM2S] [get_bd_intf_pins axi_interconnect_0/S00_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_m_axi_s2mm [get_bd_intf_pins axi_dma_0/M_AXI_S2MM] [get_bd_intf_pins axi_interconnect_0/S01_AXI]
   connect_bd_intf_net -intf_net axi_dma_0_m_axis_mm2s [get_bd_intf_pins M_AXIS_ACCEL] [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S]
@@ -273,9 +279,9 @@ proc create_hier_cell_ctrl { parentCell nameHier } {
   connect_bd_net -net axi_gpio_0_gpio_io_o [get_bd_pins fft_config_tdata] [get_bd_pins axi_gpio_0/gpio_io_i] [get_bd_pins axi_gpio_0/gpio_io_o] [get_bd_pins edge_detect_0/din]
   connect_bd_net -net edge_detect_0_edge_detected [get_bd_pins fft_config_tvalid] [get_bd_pins edge_detect_0/edge_detected]
   connect_bd_net -net proc_sys_reset_0_interconnect_aresetn [get_bd_pins axi_interconnect_0/ARESETN] [get_bd_pins axi_interconnect_0/M00_ARESETN] [get_bd_pins axi_interconnect_0/S00_ARESETN] [get_bd_pins axi_interconnect_0/S01_ARESETN] [get_bd_pins axi_interconnect_1/ARESETN] [get_bd_pins axi_interconnect_1/M00_ARESETN] [get_bd_pins axi_interconnect_1/M01_ARESETN] [get_bd_pins axi_interconnect_1/S00_ARESETN] [get_bd_pins proc_sys_reset_0/interconnect_aresetn]
-  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins axi_dma_0/axi_resetn] [get_bd_pins axi_gpio_0/s_axi_aresetn] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
+  connect_bd_net -net proc_sys_reset_0_peripheral_aresetn [get_bd_pins peripheral_aresetn] [get_bd_pins axi_dma_0/axi_resetn] [get_bd_pins axi_gpio_0/s_axi_aresetn] [get_bd_pins axi_interconnect_1/M02_ARESETN] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins ext_reset_in] [get_bd_pins proc_sys_reset_0/ext_reset_in]
-  connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_pins ctrl_aclk] [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_gpio_0/s_axi_aclk] [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] [get_bd_pins axi_interconnect_1/ACLK] [get_bd_pins axi_interconnect_1/M00_ACLK] [get_bd_pins axi_interconnect_1/M01_ACLK] [get_bd_pins axi_interconnect_1/S00_ACLK] [get_bd_pins edge_detect_0/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
+  connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_pins ctrl_aclk] [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_gpio_0/s_axi_aclk] [get_bd_pins axi_interconnect_0/ACLK] [get_bd_pins axi_interconnect_0/M00_ACLK] [get_bd_pins axi_interconnect_0/S00_ACLK] [get_bd_pins axi_interconnect_0/S01_ACLK] [get_bd_pins axi_interconnect_1/ACLK] [get_bd_pins axi_interconnect_1/M00_ACLK] [get_bd_pins axi_interconnect_1/M01_ACLK] [get_bd_pins axi_interconnect_1/M02_ACLK] [get_bd_pins axi_interconnect_1/S00_ACLK] [get_bd_pins edge_detect_0/clk] [get_bd_pins proc_sys_reset_0/slowest_sync_clk]
   connect_bd_net -net xlconcat_0_dout [get_bd_pins dma_irqs] [get_bd_pins xlconcat_0/dout]
 
   # Restore current instance
@@ -396,6 +402,9 @@ proc create_root_design { parentCell } {
 
   # Create instance: accelerator
   create_hier_cell_accelerator [current_bd_instance .] accelerator
+
+  # Create instance: axi_intc_0, and set properties
+  set axi_intc_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_intc:4.1 axi_intc_0 ]
 
   # Create instance: ctrl
   create_hier_cell_ctrl [current_bd_instance .] ctrl
@@ -1207,6 +1216,7 @@ proc create_root_design { parentCell } {
 
   # Create interface connections
   connect_bd_intf_net -intf_net axi_dma_0_m_axis_mm2s [get_bd_intf_pins accelerator/S_AXIS_DATA] [get_bd_intf_pins ctrl/M_AXIS_ACCEL]
+  connect_bd_intf_net -intf_net ctrl_M02_AXI [get_bd_intf_pins axi_intc_0/s_axi] [get_bd_intf_pins ctrl/M02_AXI]
   connect_bd_intf_net -intf_net ctrl_M_AXI_DMA_DATA [get_bd_intf_pins ctrl/M_AXI_DMA_DATA] [get_bd_intf_pins processing_system7_0/S_AXI_HP0]
   connect_bd_intf_net -intf_net processing_system7_0_ddr [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_fixed_io [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
@@ -1215,14 +1225,17 @@ proc create_root_design { parentCell } {
 
   # Create port connections
   connect_bd_net -net axi_gpio_0_gpio_io_o [get_bd_pins accelerator/s_axis_config_tdata] [get_bd_pins ctrl/fft_config_tdata]
-  connect_bd_net -net ctrl_dma_irqs [get_bd_pins ctrl/dma_irqs] [get_bd_pins processing_system7_0/IRQ_F2P]
+  connect_bd_net -net axi_intc_0_irq [get_bd_pins axi_intc_0/irq] [get_bd_pins processing_system7_0/IRQ_F2P]
+  connect_bd_net -net ctrl_dma_irqs [get_bd_pins axi_intc_0/intr] [get_bd_pins ctrl/dma_irqs]
+  connect_bd_net -net ctrl_peripheral_aresetn [get_bd_pins axi_intc_0/s_axi_aresetn] [get_bd_pins ctrl/peripheral_aresetn]
   connect_bd_net -net edge_detect_0_edge_detected [get_bd_pins accelerator/s_axis_config_tvalid] [get_bd_pins ctrl/fft_config_tvalid]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N [get_bd_pins ctrl/ext_reset_in] [get_bd_pins processing_system7_0/FCLK_RESET0_N]
-  connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_pins accelerator/aclk] [get_bd_pins ctrl/ctrl_aclk] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK]
+  connect_bd_net -net processing_system7_0_fclk_clk0 [get_bd_pins accelerator/aclk] [get_bd_pins axi_intc_0/s_axi_aclk] [get_bd_pins ctrl/ctrl_aclk] [get_bd_pins processing_system7_0/FCLK_CLK0] [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] [get_bd_pins processing_system7_0/S_AXI_HP0_ACLK]
 
   # Create address segments
   create_bd_addr_seg -range 0x00010000 -offset 0x40400000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs ctrl/axi_dma_0/S_AXI_LITE/Reg] SEG_axi_dma_0_Reg
   create_bd_addr_seg -range 0x00010000 -offset 0x41200000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs ctrl/axi_gpio_0/S_AXI/Reg] SEG_axi_gpio_0_Reg
+  create_bd_addr_seg -range 0x00010000 -offset 0x41800000 [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_intc_0/S_AXI/Reg] SEG_axi_intc_0_Reg
   create_bd_addr_seg -range 0x20000000 -offset 0x00000000 [get_bd_addr_spaces ctrl/axi_dma_0/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] SEG_processing_system7_0_HP0_DDR_LOWOCM
   create_bd_addr_seg -range 0x20000000 -offset 0x00000000 [get_bd_addr_spaces ctrl/axi_dma_0/Data_S2MM] [get_bd_addr_segs processing_system7_0/S_AXI_HP0/HP0_DDR_LOWOCM] SEG_processing_system7_0_HP0_DDR_LOWOCM
 
